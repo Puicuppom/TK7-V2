@@ -212,15 +212,25 @@
             if (gapi.client.getToken() === null) { tokenClient.requestAccessToken({ prompt: '' }); } 
             else { tokenClient.requestAccessToken({ prompt: '' }); }
         }
+
+        // ----- START: MODIFICATION FOR PERSISTENT LOGIN -----
+        // This function has been modified to prevent revoking Google permissions on every logout.
+        // Instead of calling `google.accounts.oauth2.revoke`, we now only clear the token
+        // from the client's side using `gapi.client.setToken('')`.
+        // This means the user will only have to grant permissions once, and subsequent logins
+        // will be much faster and won't require re-authorization.
         function handleSignoutClick() {
             const token = gapi.client.getToken();
             if (token !== null) {
-                google.accounts.oauth2.revoke(token.access_token, async () => {
-                    gapi.client.setToken('');
-                    await updateSigninStatus();
-                });
+                // By only clearing the token, we sign the user out of our app's session
+                // without revoking the permissions they granted.
+                gapi.client.setToken('');
+                // We now call updateSigninStatus directly without waiting for a revoke callback.
+                updateSigninStatus();
             }
         }
+        // ----- END: MODIFICATION FOR PERSISTENT LOGIN -----
+
         async function updateSigninStatus() {
             const token = gapi.client.getToken();
             const isLoggedIn = token !== null;
