@@ -127,7 +127,6 @@
         const SVG_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/></svg>`;
         const TEAMS = [ { name: 'ทีมเขียว', slug: 'green' }, { name: 'ทีมแดง', slug: 'red' }, { name: 'ทีมขาว', slug: 'white' }, { name: 'ทีมฟ้า', slug: 'blue' }, { name: 'ทีมดำ', slug: 'black' }, { name: 'ทีมเหลือง', slug: 'yellow' }, { name: 'ทีมชมพู', slug: 'pink' }, { name: 'ทีมส้ม', slug: 'orange' }, { name: 'ทีมน้ำเงิน', slug: 'navy' }, { name: 'ทีมม่วง', slug: 'purple' } ];
         
-        // ----- START: MODIFICATION FOR 4-TEAM SCHEDULES -----
         const MASTER_TEMPLATES = {
             '6-teams': [{ name: '6 ทีม', data: [ {home:1,away:6},{home:2,away:5},{home:3,away:4},{home:1,away:5},{home:6,away:4}, {home:2,away:3},{home:1,away:4},{home:5,away:3},{home:6,away:2},{home:1,away:3}, {home:4,away:2},{home:5,away:6},{home:1,away:2},{home:3,away:6},{home:4,away:5}, {home:6,away:1},{home:5,away:2},{home:4,away:3},{home:5,away:1},{home:4,away:6}, {home:3,away:2},{home:4,away:1},{home:3,away:5},{home:2,away:6},{home:3,away:1}, {home:2,away:4},{home:6,away:5},{home:2,away:1},{home:6,away:3},{home:5,away:4} ]}],
             '5-teams': [
@@ -144,91 +143,73 @@
                 { name: 'ตาราง 4', data: [ {home:2, away:3}, {home:4, away:1}, {home:1, away:2}, {home:3, away:4}, {home:4, away:2}, {home:1, away:3}, {home:2, away:4}, {home:3, away:1}, {home:4, away:3}, {home:2, away:1}, {home:3, away:2}, {home:2, away:4} ]}
             ]
         };
-        // ----- END: MODIFICATION FOR 4-TEAM SCHEDULES -----
         
         // --- GLOBAL CALLBACKS for Google Scripts ---
-        function gapiLoaded() {
-            gapi.load('client', initializeGapiClient);
-        }
+        function gapiLoaded() { gapi.load('client', initializeGapiClient); }
         function gisLoaded() {
             try {
-                tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: '', });
+                tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: '' });
                 gisInited = true;
                 checkAllLoadedAndStart();
-            } catch (err) {
-                console.error("Error initializing Google Sign-In:", err);
-                alert("เกิดข้อผิดพลาดในการเริ่มต้นระบบล็อกอินของ Google กรุณาตรวจสอบการตั้งค่า Client ID และ Origin URL");
-            }
+            } catch (err) { console.error("Error initializing Google Sign-In:", err); alert("เกิดข้อผิดพลาดในการเริ่มต้นระบบล็อกอินของ Google"); }
         }
         async function initializeGapiClient() {
             try {
-                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'], });
+                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'] });
                 gapiInited = true;
                 checkAllLoadedAndStart();
-            } catch (err) {
-                console.error("Error initializing GAPI client:", err);
-                alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับ Google API กรุณาตรวจสอบการตั้งค่า API Key");
-            }
+            } catch (err) { console.error("Error initializing GAPI client:", err); alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับ Google API"); }
         }
 
         // --- APP LIFECYCLE ---
-        document.addEventListener('DOMContentLoaded', () => {
-            isDomReady = true;
-            checkAllLoadedAndStart();
-        });
-
-        function checkAllLoadedAndStart() {
-            if (gapiInited && gisInited && isDomReady && !appStarted) {
-                appStarted = true;
-                startApp();
-            }
-        }
+        document.addEventListener('DOMContentLoaded', () => { isDomReady = true; checkAllLoadedAndStart(); });
+        function checkAllLoadedAndStart() { if (gapiInited && gisInited && isDomReady && !appStarted) { appStarted = true; startApp(); } }
         
-        // ----- START: MODIFICATION FOR PERSISTENT LOGIN -----
+        // ----- START: MODIFICATION FOR LOGIN HINT & PERSISTENCE -----
         async function startApp() {
             assignDOMElements();
             initEventListeners();
             await loadAdminEmails();
 
-            // At startup, try a silent login.
             tokenClient.callback = async (resp) => {
-                // This callback will be used for both silent and interactive login
                 if (resp.error !== undefined) {
-                    // This is expected if silent login fails.
-                    // We'll update the UI to show the logged-out state.
                     await updateSigninStatus(); 
-                    await loadInitialData(); // Then load public data
+                    await loadInitialData();
                     return;
                 }
-                // On success (silent or interactive), update UI and load data.
                 await updateSigninStatus();
                 await loadInitialData();
             };
-            tokenClient.requestAccessToken({ prompt: 'none' }); // The key part for silent login
+
+            const lastUsedEmail = localStorage.getItem('lastUsedEmail');
+            const options = { prompt: 'none' };
+            if (lastUsedEmail) {
+                options.login_hint = lastUsedEmail;
+            }
+            tokenClient.requestAccessToken(options);
             
             setupPolling();
         }
 
-        // --- AUTHENTICATION ---
         function handleAuthClick() {
             if (!tokenClient) return;
-            // The callback is already set in startApp, so we just need to trigger the request.
-            // A blank prompt allows the pop-up to appear if needed.
-            tokenClient.requestAccessToken({ prompt: '' });
+            const lastUsedEmail = localStorage.getItem('lastUsedEmail');
+            const options = { prompt: '' }; // Empty prompt for interactive pop-up
+            if (lastUsedEmail) {
+                options.login_hint = lastUsedEmail;
+            }
+            tokenClient.requestAccessToken(options);
         }
 
         function handleSignoutClick() {
             const token = gapi.client.getToken();
             if (token !== null) {
-                // Clear the token from our app's memory to sign out.
                 gapi.client.setToken('');
-                // Update the UI to reflect the signed-out state.
+                localStorage.removeItem('lastUsedEmail'); // Clear the stored email on logout
                 updateSigninStatus();
-                // We should also reload the data to show the public view.
                 loadInitialData();
             }
         }
-        // ----- END: MODIFICATION FOR PERSISTENT LOGIN -----
 
         async function updateSigninStatus() {
             const token = gapi.client.getToken();
@@ -245,187 +226,34 @@
                         isAdmin = true;
                         userInfo.textContent = `👤 ${userEmail}`;
                         userInfo.style.display = 'inline-block';
+                        localStorage.setItem('lastUsedEmail', userEmail); // Save email on successful admin login
                     }
                 } catch (err) { console.error("Error fetching user profile", err); isAdmin = false; }
             }
             
-            if (!isAdmin) { userInfo.style.display = 'none'; }
+            if (!isAdmin) { userInfo.style.display = 'none'; localStorage.removeItem('lastUsedEmail'); }
             currentUser = isAdmin;
             loginBtn.style.display = isAdmin ? 'none' : 'inline-block';
             logoutBtn.style.display = isAdmin ? 'inline-block' : 'none';
             document.querySelector('.nav-btn[data-page="page-setup"]').style.display = isAdmin ? 'flex' : 'none';
             document.getElementById('delete-day-btn').style.display = isAdmin ? 'inline-flex' : 'none';
             
-            if (!isAdmin && activePage === 'page-setup') { 
-                setActivePage('page-schedule');
-            }
+            if (!isAdmin && activePage === 'page-setup') { setActivePage('page-schedule'); }
             renderAllPagesForDate(currentDateKey);
         }
-        
-        function assignDOMElements() {
-            contentContainer = document.getElementById('content');
-            pages = document.querySelectorAll('.page');
-            navButtons = document.querySelectorAll('.nav-btn');
-            loginBtn = document.getElementById('login-btn');
-            logoutBtn = document.getElementById('logout-btn');
-            userInfo = document.getElementById('user-info');
-            teamSelectModal = document.getElementById('team-select-modal');
-            debouncedUpdateInSheet = debounce(updateScheduleOrderInSheet, 1500);
-        }
-        function initEventListeners() {
-            loginBtn.addEventListener('click', handleAuthClick);
-            logoutBtn.addEventListener('click', handleSignoutClick);
-            document.getElementById('export-schedule-btn').addEventListener('click', (e) => exportElementAsPNG('schedule-container', `TK7-Schedule-${currentDateKey}.png`, e.currentTarget));
-            document.getElementById('export-scores-btn').addEventListener('click', (e) => exportElementAsPNG('scores-container', `TK7-Scores-${currentDateKey}.png`, e.currentTarget));
-            document.getElementById('export-leaderboard-btn').addEventListener('click', (e) => exportElementAsPNG('leaderboard-container', `TK7-Leaderboard-${currentDateKey}.png`, e.currentTarget));
-            setupNavigation();
-            document.querySelector('#team-select-modal .close-modal-btn').addEventListener('click', () => teamSelectModal.style.display = 'none');
-            window.addEventListener('click', (event) => { if (event.target == teamSelectModal) { event.target.style.display = "none"; } });
-            setupDragAndDropListeners(document.getElementById('schedule-container'));
-            document.getElementById('generate-schedule-btn').addEventListener('click', generateAndSaveScheduleToSheet);
-            document.getElementById('delete-day-btn').onclick = () => {
-                const dateToDelete = document.getElementById('schedule-date-selector').value;
-                if(dateToDelete && dateToDelete !== 'ยังไม่มีข้อมูล') {
-                    deleteDayFromSheet(dateToDelete);
-                }
-            };
-            contentContainer.addEventListener('click', handleMainClick);
-        }
-        async function loadAdminEmails() {
-            try {
-                const response = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Admins!A2:A' });
-                const values = response.result.values;
-                adminEmails = (values && values.length > 0) ? values.flat().map(email => email.trim().toLowerCase()) : [];
-            } catch (err) { handleApiError(err, "Error loading admin emails"); adminEmails = []; }
-        }
+        // ----- END: MODIFICATION FOR LOGIN HINT & PERSISTENCE -----
 
-        // --- DATA HANDLING & POLLING ---
+        // --- All other functions from this point on are mostly unchanged ---
+        function assignDOMElements() { contentContainer = document.getElementById('content'); pages = document.querySelectorAll('.page'); navButtons = document.querySelectorAll('.nav-btn'); loginBtn = document.getElementById('login-btn'); logoutBtn = document.getElementById('logout-btn'); userInfo = document.getElementById('user-info'); teamSelectModal = document.getElementById('team-select-modal'); debouncedUpdateInSheet = debounce(updateScheduleOrderInSheet, 1500); }
+        function initEventListeners() { loginBtn.addEventListener('click', handleAuthClick); logoutBtn.addEventListener('click', handleSignoutClick); document.getElementById('export-schedule-btn').addEventListener('click', (e) => exportElementAsPNG('schedule-container', `TK7-Schedule-${currentDateKey}.png`, e.currentTarget)); document.getElementById('export-scores-btn').addEventListener('click', (e) => exportElementAsPNG('scores-container', `TK7-Scores-${currentDateKey}.png`, e.currentTarget)); document.getElementById('export-leaderboard-btn').addEventListener('click', (e) => exportElementAsPNG('leaderboard-container', `TK7-Leaderboard-${currentDateKey}.png`, e.currentTarget)); setupNavigation(); document.querySelector('#team-select-modal .close-modal-btn').addEventListener('click', () => teamSelectModal.style.display = 'none'); window.addEventListener('click', (event) => { if (event.target == teamSelectModal) { event.target.style.display = "none"; } }); setupDragAndDropListeners(document.getElementById('schedule-container')); document.getElementById('generate-schedule-btn').addEventListener('click', generateAndSaveScheduleToSheet); document.getElementById('delete-day-btn').onclick = () => { const dateToDelete = document.getElementById('schedule-date-selector').value; if(dateToDelete && dateToDelete !== 'ยังไม่มีข้อมูล') { deleteDayFromSheet(dateToDelete); } }; contentContainer.addEventListener('click', handleMainClick); }
+        async function loadAdminEmails() { try { const response = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Admins!A2:A' }); const values = response.result.values; adminEmails = (values && values.length > 0) ? values.flat().map(email => email.trim().toLowerCase()) : []; } catch (err) { handleApiError(err, "Error loading admin emails"); adminEmails = []; } }
         function setupPolling() { setInterval(async () => { if (!document.hidden && activePage !== 'page-setup' && gapiInited) { saveScrollPosition(); shouldRestoreScroll = true; await loadDataForDate(currentDateKey, true); } }, 30000); }
-        async function loadInitialData() {
-            try {
-                const response = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A2:A' });
-                let availableDates = [];
-                if (response.result.values && response.result.values.length > 0) { availableDates = response.result.values.flat().filter(d => d).sort((a, b) => new Date(b) - new Date(a)); }
-                updateDateSelectorsUI(availableDates);
-                const initialDate = document.getElementById('schedule-date-selector').value || (availableDates.length > 0 ? availableDates[0] : new Date().toISOString().split('T')[0]);
-                await loadDataForDate(initialDate);
-            } catch (err) { handleApiError(err, "Error loading initial data"); }
-        }
-        async function loadDataForDate(date, isPolling = false) {
-            if (!date) return;
-            if (!isPolling) { currentDateKey = date; updateAllDatePickers(date); }
-            try {
-                const settingsResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A:F' });
-                const allSettingsRows = settingsResponse.result.values || [];
-                const settingsHeader = allSettingsRows.shift() || [];
-                const settingsRow = allSettingsRows.find(row => row[0] === date);
-                if (!settingsRow) { appData[date] = null; if(currentUser) resetSettingsForm(); renderAllPagesForDate(date); return; }
-                const settings = {
-                    timePerMatch: parseInt(settingsRow[settingsHeader.indexOf('time_per_match')]) || 9,
-                    startTime: settingsRow[settingsHeader.indexOf('start_time')] || '20:00',
-                    activeTeams: settingsRow[settingsHeader.indexOf('active_teams')] ? settingsRow[settingsHeader.indexOf('active_teams')].split(',') : [],
-                    opener: { home: settingsRow[settingsHeader.indexOf('opener_home')] || '', away: settingsRow[settingsHeader.indexOf('opener_away')] || '' }
-                };
-                const scheduleResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:F' });
-                const allScheduleRows = scheduleResponse.result.values || [];
-                const scheduleHeader = allScheduleRows.shift() || [];
-                const scheduleRowsForDate = allScheduleRows.filter(row => row[0] === date);
-                const schedule = scheduleRowsForDate.map(row => ({
-                    match_index: parseInt(row[scheduleHeader.indexOf('match_index')]),
-                    home: row[scheduleHeader.indexOf('home_team')], away: row[scheduleHeader.indexOf('away_team')],
-                    homeScore: row[scheduleHeader.indexOf('home_score')] === '' || row[scheduleHeader.indexOf('home_score')] === undefined ? null : parseInt(row[scheduleHeader.indexOf('home_score')]),
-                    awayScore: row[scheduleHeader.indexOf('away_score')] === '' || row[scheduleHeader.indexOf('away_score')] === undefined ? null : parseInt(row[scheduleHeader.indexOf('away_score')]),
-                })).sort((a, b) => a.match_index - b.match_index).map(({match_index, ...rest}) => rest);
-                appData[date] = { match_date: date, settings: settings, schedule: schedule };
-                if (currentUser && !isPolling) loadSettingsFromData(settings);
-                renderAllPagesForDate(date);
-                restoreScrollPosition();
-            } catch (err) { handleApiError(err, `Error loading data for date ${date}`); }
-        }
-        async function updateScheduleOrderInSheet(newOrderedSchedule) {
-            if (!currentUser) return;
-            const date = currentDateKey;
-            try {
-                const scheduleData = newOrderedSchedule.map((match, index) => [date, index, match.home, match.away, match.homeScore === null ? '' : match.homeScore, match.awayScore === null ? '' : match.awayScore]);
-                const allSchedules = (await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:F' })).result.values || [];
-                const otherSchedules = allSchedules.slice(1).filter(row => row[0] !== date);
-                const finalData = [...otherSchedules, ...scheduleData];
-                await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A2:F' });
-                if (finalData.length > 0) { await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A2', valueInputOption: 'USER_ENTERED', resource: { values: finalData } }); }
-                appData[date].schedule = newOrderedSchedule;
-                renderSchedulePage(date);
-                showToast("อัปเดตลำดับเรียบร้อย");
-            } catch (err) { handleApiError(err, 'Error updating schedule order'); }
-        }
-        async function updateScoreInSheet(index, team, value) {
-            if (!currentUser) { showToast("ต้องเข้าระบบผู้ดูแลก่อน"); return; }
-            try {
-                const date = currentDateKey;
-                const findResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `Schedules!A:B` });
-                const rows = findResponse.result.values || [];
-                const rowIndex = rows.findIndex(row => row[0] === date && parseInt(row[1]) === index) + 1;
-                if (rowIndex < 1) { console.error(`Match not found for date: ${date}, index: ${index}`); showToast("เกิดข้อผิดพลาด: ไม่พบแมตช์ในชีต"); return; }
-                const targetColumn = (team === 'home') ? 'E' : 'F';
-                const updateRange = `Schedules!${targetColumn}${rowIndex}`;
-                await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: updateRange, valueInputOption: 'USER_ENTERED', resource: { values: [[value === null ? '' : value]] } });
-                appData[date].schedule[index][`${team}Score`] = value;
-                renderLeaderboardPage(date);
-            } catch (err) { handleApiError(err, 'Error updating score'); await loadDataForDate(currentDateKey); }
-        }
-        async function generateAndSaveScheduleToSheet() {
-            if (!currentUser) return alert('ต้องเป็นผู้ดูแลเท่านั้น');
-            const date = document.getElementById('match-date').value;
-            if (!date) return alert('กรุณาเลือกวันที่แข่งขัน');
-            const settings = {
-                timePerMatch: parseInt(document.getElementById('time-per-match').value),
-                startTime: document.getElementById('start-time').value,
-                activeTeams: Array.from(document.querySelectorAll('.team-switch:checked')).map(sw => sw.dataset.teamSlug),
-                opener: { home: document.getElementById('opener-home').value, away: document.getElementById('opener-away').value }
-            };
-            if (settings.activeTeams.length < 2) return alert('ต้องมีอย่างน้อย 2 ทีม');
-            if (settings.opener.home && settings.opener.away && settings.opener.home === settings.opener.away) return alert('ทีมเหย้า-เยือนนัดเปิดสนามต้องไม่ซ้ำกัน');
-            let schedule;
-            const teamCount = settings.activeTeams.length;
-            const templateKey = `${teamCount}-teams`;
-            const templateIndex = parseInt(document.getElementById('template-selector').value) || 0;
-            if (MASTER_TEMPLATES[templateKey]) { schedule = generateScheduleFromTemplate(settings.activeTeams, templateIndex, (teamCount === 6) ? settings.opener : null); } 
-            else { schedule = generateDoubleRoundRobin(settings.activeTeams); if (settings.opener && settings.opener.home && settings.opener.away) { const openerIndex = schedule.findIndex(m => m.home === settings.opener.home && m.away === settings.opener.away); if (openerIndex > 0) { schedule = [...schedule.slice(openerIndex), ...schedule.slice(0, openerIndex)]; } } }
-            const finalSchedule = schedule.map(match => ({...match, homeScore: null, awayScore: null}));
-            try {
-                const findResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `MatchDays!A:A` });
-                const dateRows = (findResponse.result.values || []).slice(1);
-                const rowIndex = dateRows.findIndex(row => row[0] === date);
-                if (rowIndex > -1) { if (!confirm("มีข้อมูลของวันนี้อยู่แล้ว ต้องการเขียนทับหรือไม่?")) return; await deleteDayFromSheet(date, true); }
-                const matchDayData = [date, settings.timePerMatch, settings.startTime, settings.activeTeams.join(','), settings.opener.home, settings.opener.away];
-                const scheduleData = finalSchedule.map((match, index) => [date, index, match.home, match.away, '', '']);
-                await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A1', valueInputOption: 'USER_ENTERED', resource: { values: [matchDayData] } });
-                if(scheduleData.length > 0) { await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A1', valueInputOption: 'USER_ENTERED', resource: { values: scheduleData } }); }
-                showToast('สร้างตารางแข่งขันเรียบร้อยแล้ว!');
-                await loadInitialData();
-                currentDateKey = date;
-                await loadDataForDate(date);
-                setActivePage('page-schedule');
-            } catch(err) { handleApiError(err, 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'); }
-        }
-        async function deleteDayFromSheet(dateToDelete, silent = false) {
-            if (!currentUser) return;
-            if (!silent && !confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลของวันที่ ${dateToDelete} ทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้`)) return;
-            try {
-                const allMatchDays = (await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A:F' })).result.values || [];
-                const allSchedules = (await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:F' })).result.values || [];
-                const newMatchDays = allMatchDays.filter((row, index) => index === 0 || row[0] !== dateToDelete);
-                const newSchedules = allSchedules.filter((row, index) => index === 0 || row[0] !== dateToDelete);
-                await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A:Z' });
-                await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:Z' });
-                await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A1', valueInputOption: 'USER_ENTERED', resource: { values: newMatchDays } });
-                await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A1', valueInputOption: 'USER_ENTERED', resource: { values: newSchedules } });
-                if (!silent) showToast(`ลบข้อมูลของวันที่ ${dateToDelete} เรียบร้อยแล้ว`);
-                delete appData[dateToDelete];
-                await loadInitialData();
-            } catch (err) { handleApiError(err, "Error deleting day data"); }
-        }
-        
-        // --- UTILITY & RENDER FUNCTIONS ---
+        async function loadInitialData() { try { const response = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A2:A' }); let availableDates = []; if (response.result.values && response.result.values.length > 0) { availableDates = response.result.values.flat().filter(d => d).sort((a, b) => new Date(b) - new Date(a)); } updateDateSelectorsUI(availableDates); const initialDate = document.getElementById('schedule-date-selector').value || (availableDates.length > 0 ? availableDates[0] : new Date().toISOString().split('T')[0]); await loadDataForDate(initialDate); } catch (err) { handleApiError(err, "Error loading initial data"); } }
+        async function loadDataForDate(date, isPolling = false) { if (!date) return; if (!isPolling) { currentDateKey = date; updateAllDatePickers(date); } try { const settingsResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A:F' }); const allSettingsRows = settingsResponse.result.values || []; const settingsHeader = allSettingsRows.shift() || []; const settingsRow = allSettingsRows.find(row => row[0] === date); if (!settingsRow) { appData[date] = null; if(currentUser) resetSettingsForm(); renderAllPagesForDate(date); return; } const settings = { timePerMatch: parseInt(settingsRow[settingsHeader.indexOf('time_per_match')]) || 9, startTime: settingsRow[settingsHeader.indexOf('start_time')] || '20:00', activeTeams: settingsRow[settingsHeader.indexOf('active_teams')] ? settingsRow[settingsHeader.indexOf('active_teams')].split(',') : [], opener: { home: settingsRow[settingsHeader.indexOf('opener_home')] || '', away: settingsRow[settingsHeader.indexOf('opener_away')] || '' } }; const scheduleResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:F' }); const allScheduleRows = scheduleResponse.result.values || []; const scheduleHeader = allScheduleRows.shift() || []; const scheduleRowsForDate = allScheduleRows.filter(row => row[0] === date); const schedule = scheduleRowsForDate.map(row => ({ match_index: parseInt(row[scheduleHeader.indexOf('match_index')]), home: row[scheduleHeader.indexOf('home_team')], away: row[scheduleHeader.indexOf('away_team')], homeScore: row[scheduleHeader.indexOf('home_score')] === '' || row[scheduleHeader.indexOf('home_score')] === undefined ? null : parseInt(row[scheduleHeader.indexOf('home_score')]), awayScore: row[scheduleHeader.indexOf('away_score')] === '' || row[scheduleHeader.indexOf('away_score')] === undefined ? null : parseInt(row[scheduleHeader.indexOf('away_score')]), })).sort((a, b) => a.match_index - b.match_index).map(({match_index, ...rest}) => rest); appData[date] = { match_date: date, settings: settings, schedule: schedule }; if (currentUser && !isPolling) loadSettingsFromData(settings); renderAllPagesForDate(date); restoreScrollPosition(); } catch (err) { handleApiError(err, `Error loading data for date ${date}`); } }
+        async function updateScheduleOrderInSheet(newOrderedSchedule) { if (!currentUser) return; const date = currentDateKey; try { const scheduleData = newOrderedSchedule.map((match, index) => [date, index, match.home, match.away, match.homeScore === null ? '' : match.homeScore, match.awayScore === null ? '' : match.awayScore]); const allSchedules = (await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:F' })).result.values || []; const otherSchedules = allSchedules.slice(1).filter(row => row[0] !== date); const finalData = [...otherSchedules, ...scheduleData]; await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A2:F' }); if (finalData.length > 0) { await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A2', valueInputOption: 'USER_ENTERED', resource: { values: finalData } }); } appData[date].schedule = newOrderedSchedule; renderSchedulePage(date); showToast("อัปเดตลำดับเรียบร้อย"); } catch (err) { handleApiError(err, 'Error updating schedule order'); } }
+        async function updateScoreInSheet(index, team, value) { if (!currentUser) { showToast("ต้องเข้าระบบผู้ดูแลก่อน"); return; } try { const date = currentDateKey; const findResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `Schedules!A:B` }); const rows = findResponse.result.values || []; const rowIndex = rows.findIndex(row => row[0] === date && parseInt(row[1]) === index) + 1; if (rowIndex < 1) { console.error(`Match not found for date: ${date}, index: ${index}`); showToast("เกิดข้อผิดพลาด: ไม่พบแมตช์ในชีต"); return; } const targetColumn = (team === 'home') ? 'E' : 'F'; const updateRange = `Schedules!${targetColumn}${rowIndex}`; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: updateRange, valueInputOption: 'USER_ENTERED', resource: { values: [[value === null ? '' : value]] } }); appData[date].schedule[index][`${team}Score`] = value; renderLeaderboardPage(date); } catch (err) { handleApiError(err, 'Error updating score'); await loadDataForDate(currentDateKey); } }
+        async function generateAndSaveScheduleToSheet() { if (!currentUser) return alert('ต้องเป็นผู้ดูแลเท่านั้น'); const date = document.getElementById('match-date').value; if (!date) return alert('กรุณาเลือกวันที่แข่งขัน'); const settings = { timePerMatch: parseInt(document.getElementById('time-per-match').value), startTime: document.getElementById('start-time').value, activeTeams: Array.from(document.querySelectorAll('.team-switch:checked')).map(sw => sw.dataset.teamSlug), opener: { home: document.getElementById('opener-home').value, away: document.getElementById('opener-away').value } }; if (settings.activeTeams.length < 2) return alert('ต้องมีอย่างน้อย 2 ทีม'); if (settings.opener.home && settings.opener.away && settings.opener.home === settings.opener.away) return alert('ทีมเหย้า-เยือนนัดเปิดสนามต้องไม่ซ้ำกัน'); let schedule; const teamCount = settings.activeTeams.length; const templateKey = `${teamCount}-teams`; const templateIndex = parseInt(document.getElementById('template-selector').value) || 0; if (MASTER_TEMPLATES[templateKey]) { schedule = generateScheduleFromTemplate(settings.activeTeams, templateIndex, (teamCount === 6) ? settings.opener : null); } else { schedule = generateDoubleRoundRobin(settings.activeTeams); if (settings.opener && settings.opener.home && settings.opener.away) { const openerIndex = schedule.findIndex(m => m.home === settings.opener.home && m.away === settings.opener.away); if (openerIndex > 0) { schedule = [...schedule.slice(openerIndex), ...schedule.slice(0, openerIndex)]; } } } const finalSchedule = schedule.map(match => ({...match, homeScore: null, awayScore: null})); try { const findResponse = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `MatchDays!A:A` }); const dateRows = (findResponse.result.values || []).slice(1); const rowIndex = dateRows.findIndex(row => row[0] === date); if (rowIndex > -1) { if (!confirm("มีข้อมูลของวันนี้อยู่แล้ว ต้องการเขียนทับหรือไม่?")) return; await deleteDayFromSheet(date, true); } const matchDayData = [date, settings.timePerMatch, settings.startTime, settings.activeTeams.join(','), settings.opener.home, settings.opener.away]; const scheduleData = finalSchedule.map((match, index) => [date, index, match.home, match.away, '', '']); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A1', valueInputOption: 'USER_ENTERED', resource: { values: [matchDayData] } }); if(scheduleData.length > 0) { await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A1', valueInputOption: 'USER_ENTERED', resource: { values: scheduleData } }); } showToast('สร้างตารางแข่งขันเรียบร้อยแล้ว!'); await loadInitialData(); currentDateKey = date; await loadDataForDate(date); setActivePage('page-schedule'); } catch(err) { handleApiError(err, 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'); } }
+        async function deleteDayFromSheet(dateToDelete, silent = false) { if (!currentUser) return; if (!silent && !confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลของวันที่ ${dateToDelete} ทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้`)) return; try { const allMatchDays = (await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A:F' })).result.values || []; const allSchedules = (await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:F' })).result.values || []; const newMatchDays = allMatchDays.filter((row, index) => index === 0 || row[0] !== dateToDelete); const newSchedules = allSchedules.filter((row, index) => index === 0 || row[0] !== dateToDelete); await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A:Z' }); await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A:Z' }); await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: 'MatchDays!A1', valueInputOption: 'USER_ENTERED', resource: { values: newMatchDays } }); await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: 'Schedules!A1', valueInputOption: 'USER_ENTERED', resource: { values: newSchedules } }); if (!silent) showToast(`ลบข้อมูลของวันที่ ${dateToDelete} เรียบร้อยแล้ว`); delete appData[dateToDelete]; await loadInitialData(); } catch (err) { handleApiError(err, "Error deleting day data"); } }
         function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
         function saveScrollPosition() { lastScrollPosition = contentContainer.scrollTop; }
         function restoreScrollPosition() { if (shouldRestoreScroll) { requestAnimationFrame(() => { contentContainer.scrollTop = lastScrollPosition; }); } shouldRestoreScroll = false; }
@@ -434,67 +262,11 @@
         function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast-notification'; toast.textContent = message; document.body.appendChild(toast); setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => { document.body.removeChild(toast); }, 2500); }, 2500); }
         function createNoDataMessage(message, icon) { return `<div id="no-data-message"><div class="icon">${icon}</div><p>${message}</p></div>`; }
         function updateAllDatePickers(date) { const selectors = [ document.getElementById('schedule-date-selector'), document.getElementById('scores-date-selector'), document.getElementById('leaderboard-date-selector') ]; selectors.forEach(s => s.value = date); if(document.getElementById('match-date')) { document.getElementById('match-date').value = date; }}
-        function updateDateSelectorsUI(dates) {
-            const selectors = [ document.getElementById('schedule-date-selector'), document.getElementById('scores-date-selector'), document.getElementById('leaderboard-date-selector') ];
-            selectors.forEach(selector => {
-                const currentVal = selector.value;
-                selector.innerHTML = '';
-                if (dates.length === 0) { selector.innerHTML = '<option>ยังไม่มีข้อมูล</option>'; } 
-                else { dates.forEach(date => { const option = document.createElement('option'); option.value = date; option.textContent = new Date(date + 'T00:00:00').toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }); selector.appendChild(option); }); }
-                if (dates.includes(currentVal)) selector.value = currentVal;
-            });
-            const mainSelector = document.getElementById('schedule-date-selector');
-            mainSelector.onchange = (e) => { loadDataForDate(e.target.value); };
-            [document.getElementById('scores-date-selector'), document.getElementById('leaderboard-date-selector')].forEach(s => s.onchange = (e) => { loadDataForDate(e.target.value); });
-        }
+        function updateDateSelectorsUI(dates) { const selectors = [ document.getElementById('schedule-date-selector'), document.getElementById('scores-date-selector'), document.getElementById('leaderboard-date-selector') ]; selectors.forEach(selector => { const currentVal = selector.value; selector.innerHTML = ''; if (dates.length === 0) { selector.innerHTML = '<option>ยังไม่มีข้อมูล</option>'; } else { dates.forEach(date => { const option = document.createElement('option'); option.value = date; option.textContent = new Date(date + 'T00:00:00').toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }); selector.appendChild(option); }); } if (dates.includes(currentVal)) selector.value = currentVal; }); const mainSelector = document.getElementById('schedule-date-selector'); mainSelector.onchange = (e) => { loadDataForDate(e.target.value); }; [document.getElementById('scores-date-selector'), document.getElementById('leaderboard-date-selector')].forEach(s => s.onchange = (e) => { loadDataForDate(e.target.value); }); }
         function renderAllPagesForDate(date) { setupPageSetup(); renderSchedulePage(date); renderScoresPage(date); renderLeaderboardPage(date); }
-        function renderSchedulePage(date){const dayData=appData[date];const container=document.getElementById("schedule-container");if(!dayData||!dayData.schedule||0===dayData.schedule.length)return void renderWithMorph(container,createNoDataMessage("ยังไม่มีตารางการแข่งขันสำหรับวันนี้","📅"));const{schedule:schedule,settings:settings}=dayData,startTime=new Date(`${date}T${settings.startTime}`);let html=schedule.map((match,index)=>{const matchTime=new Date(startTime.getTime()+index*settings.timePerMatch*6e4),timeStr=matchTime.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}),homeTeam=TEAMS.find(t=>t.slug===match.home)||{name:"N/A",slug:"black"},awayTeam=TEAMS.find(t=>t.slug===match.away)||{name:"N/A",slug:"black"},adminDeleteBtn=currentUser?`<div class="match-actions"><button class="delete-match-btn" data-index="${index}" title="ลบแมตช์นี้">${SVG_TRASH}</button></div>`:"",draggableClass=currentUser?"draggable":"",draggableAttr=currentUser?'draggable="true"':"",clickableTeamClass=currentUser?"clickable-team":"";return`<div class="card match-card ${draggableClass}" data-index="${index}" ${draggableAttr}>
-                    <div class="match-header"><span>แมตช์ที่ ${index+1}</span><span>⏱️ ${timeStr}</span>${adminDeleteBtn}</div>
-                    <div class="match-body">
-                        <div class="team-emblem ${homeTeam.slug} ${clickableTeamClass}" data-index="${index}" data-side="home">${homeTeam.name}</div>
-                        <span class="vs">VS</span>
-                        <div class="team-emblem ${awayTeam.slug} ${clickableTeamClass}" data-index="${index}" data-side="away">${awayTeam.name}</div>
-                    </div>
-                </div>`}).join("");currentUser&&dayData.schedule&&(html+='<button id="add-match-btn" class="btn btn-primary">➕ เพิ่มแมตช์ใหม่</button>'),renderWithMorph(container,html)}
-        function renderScoresPage(date){const dayData=appData[date];const container=document.getElementById("scores-container");if(!dayData||!dayData.schedule||0===dayData.schedule.length)return void renderWithMorph(container,createNoDataMessage("ยังไม่มีข้อมูลการแข่งขันสำหรับวันนี้","✏️"));const svgMinus='<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>',svgPlus='<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>',svgReset='<svg viewBox="0 0 24 24"><path d="M17.65,6.35C16.2,4.9,14.21,4,12,4c-4.42,0-7.99,3.58-7.99,8s3.57,8,7.99,8c3.73,0,6.84-2.55,7.73-6h-2.08c-0.82,2.33-3.04,4-5.65,4-3.31,0-6-2.69-6-6s2.69-6,6-6c1.66,0,3.14,0.69,4.22,1.78L13,11h7V4L17.65,6.35z"/></svg>',{schedule:schedule,settings:settings}=dayData,startTime=new Date(`${date}T${settings.startTime}`),isReadOnly=!currentUser,disabledAttr=isReadOnly?"disabled":"",html=schedule.map((match,index)=>{const matchTime=new Date(startTime.getTime()+index*settings.timePerMatch*6e4),timeStr=matchTime.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}),homeTeam=TEAMS.find(t=>t.slug===match.home)||{name:"N/A",slug:"black"},awayTeam=TEAMS.find(t=>t.slug===match.away)||{name:"N/A",slug:"black"},readonlyAttr=isReadOnly?"readonly":"",homeScoreText=null!==match.homeScore?match.homeScore:" ",awayScoreText=null!==match.awayScore?match.awayScore:" ",separator=null!==match.homeScore&&null!==match.awayScore?"-":"vs";return`<div class="card match-card">
-                    <div class="match-header"><span>แมตช์ที่ ${index+1}</span><span>⏱️ ${timeStr}</span></div>
-                    <div class="score-line-export">
-                        <div class="team-emblem ${homeTeam.slug}">${homeTeam.name}</div>
-                        <div class="score-block"><span class="score-value">${homeScoreText}</span><span class="vs-export">${separator}</span><span class="score-value">${awayScoreText}</span></div>
-                        <div class="team-emblem ${awayTeam.slug}">${awayTeam.name}</div>
-                    </div>
-                    <div class="interactive-controls">
-                        <div class="team-score-wrapper">
-                            <div class="team-emblem ${homeTeam.slug}">${homeTeam.name}</div>
-                            <div class="score-control">
-                                <button class="score-btn" data-index="${index}" data-team="home" data-op="-1" ${disabledAttr}>${svgMinus}</button>
-                                <input type="number" class="score-input" value="${null===match.homeScore?"":match.homeScore}" data-index="${index}" data-team="home" ${readonlyAttr}>
-                                <button class="score-btn" data-index="${index}" data-team="home" data-op="1" ${disabledAttr}>${svgPlus}</button>
-                            </div>
-                        </div>
-                        <div class="match-center-controls">
-                            <span class="vs">VS</span>
-                            <button class="reset-score-btn" data-index="${index}" ${disabledAttr}>${svgReset}</button>
-                        </div>
-                        <div class="team-score-wrapper">
-                            <div class="team-emblem ${awayTeam.slug}">${awayTeam.name}</div>
-                            <div class="score-control">
-                                <button class="score-btn" data-index="${index}" data-team="away" data-op="-1" ${disabledAttr}>${svgMinus}</button>
-                                <input type="number" class="score-input" value="${null===match.awayScore?"":match.awayScore}" data-index="${index}" data-team="away" ${readonlyAttr}>
-                                <button class="score-btn" data-index="${index}" data-team="away" data-op="1" ${disabledAttr}>${svgPlus}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`}).join("");renderWithMorph(container,html)}
-        function renderLeaderboardPage(date){const dayData=appData[date];const container=document.getElementById("leaderboard-container");if(!dayData||!dayData.settings||!dayData.settings.activeTeams)return void renderWithMorph(container,createNoDataMessage("ยังไม่มีข้อมูลตารางคะแนน","📊"));const stats=calculateLeaderboard(date),sortedTeams=Object.values(stats).sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.gd!==a.gd?b.gd-a.gd:b.gf!==a.gf?b.gf-a.gf:a.name.localeCompare(b.name)),medals=["🥇","🥈","🥉"],html=`<table class="leaderboard-table">
-                <thead><tr><th>#</th><th class="team-name">ทีม</th><th>แข่ง</th><th>ชนะ</th><th>เสมอ</th><th>แพ้</th><th>ได้</th><th>เสีย</th><th>+/-</th><th>คะแนน</th></tr></thead>
-                <tbody>${sortedTeams.map((team,index)=>`
-                    <tr>
-                        <td>${medals[index]||index+1}</td>
-                        <td class="team-name"><div class="team-emblem ${team.slug}" style="display:inline-flex; padding: 4px 8px; font-size: 14px;">${team.name}</div></td>
-                        <td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gf}</td><td>${team.ga}</td><td>${team.gd}</td><td><strong>${team.pts}</strong></td>
-                    </tr>`).join("")}
-                </tbody></table>`;renderWithMorph(container,html)}
+        function renderSchedulePage(date){const dayData=appData[date];const container=document.getElementById("schedule-container");if(!dayData||!dayData.schedule||0===dayData.schedule.length)return void renderWithMorph(container,createNoDataMessage("ยังไม่มีตารางการแข่งขันสำหรับวันนี้","📅"));const{schedule:schedule,settings:settings}=dayData,startTime=new Date(`${date}T${settings.startTime}`);let html=schedule.map((match,index)=>{const matchTime=new Date(startTime.getTime()+index*settings.timePerMatch*6e4),timeStr=matchTime.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}),homeTeam=TEAMS.find(t=>t.slug===match.home)||{name:"N/A",slug:"black"},awayTeam=TEAMS.find(t=>t.slug===match.away)||{name:"N/A",slug:"black"},adminDeleteBtn=currentUser?`<div class="match-actions"><button class="delete-match-btn" data-index="${index}" title="ลบแมตช์นี้">${SVG_TRASH}</button></div>`:"",draggableClass=currentUser?"draggable":"",draggableAttr=currentUser?'draggable="true"':"",clickableTeamClass=currentUser?"clickable-team":"";return`<div class="card match-card ${draggableClass}" data-index="${index}" ${draggableAttr}><div class="match-header"><span>แมตช์ที่ ${index+1}</span><span>⏱️ ${timeStr}</span>${adminDeleteBtn}</div><div class="match-body"><div class="team-emblem ${homeTeam.slug} ${clickableTeamClass}" data-index="${index}" data-side="home">${homeTeam.name}</div><span class="vs">VS</span><div class="team-emblem ${awayTeam.slug} ${clickableTeamClass}" data-index="${index}" data-side="away">${awayTeam.name}</div></div></div>`}).join("");currentUser&&dayData.schedule&&(html+='<button id="add-match-btn" class="btn btn-primary">➕ เพิ่มแมตช์ใหม่</button>'),renderWithMorph(container,html)}
+        function renderScoresPage(date){const dayData=appData[date];const container=document.getElementById("scores-container");if(!dayData||!dayData.schedule||0===dayData.schedule.length)return void renderWithMorph(container,createNoDataMessage("ยังไม่มีข้อมูลการแข่งขันสำหรับวันนี้","✏️"));const svgMinus='<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>',svgPlus='<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>',svgReset='<svg viewBox="0 0 24 24"><path d="M17.65,6.35C16.2,4.9,14.21,4,12,4c-4.42,0-7.99,3.58-7.99,8s3.57,8,7.99,8c3.73,0,6.84-2.55,7.73-6h-2.08c-0.82,2.33-3.04,4-5.65,4-3.31,0-6-2.69-6-6s2.69-6,6-6c1.66,0,3.14,0.69,4.22,1.78L13,11h7V4L17.65,6.35z"/></svg>',{schedule:schedule,settings:settings}=dayData,startTime=new Date(`${date}T${settings.startTime}`),isReadOnly=!currentUser,disabledAttr=isReadOnly?"disabled":"",html=schedule.map((match,index)=>{const matchTime=new Date(startTime.getTime()+index*settings.timePerMatch*6e4),timeStr=matchTime.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}),homeTeam=TEAMS.find(t=>t.slug===match.home)||{name:"N/A",slug:"black"},awayTeam=TEAMS.find(t=>t.slug===match.away)||{name:"N/A",slug:"black"},readonlyAttr=isReadOnly?"readonly":"",homeScoreText=null!==match.homeScore?match.homeScore:" ",awayScoreText=null!==match.awayScore?match.awayScore:" ",separator=null!==match.homeScore&&null!==match.awayScore?"-":"vs";return`<div class="card match-card"><div class="match-header"><span>แมตช์ที่ ${index+1}</span><span>⏱️ ${timeStr}</span></div><div class="score-line-export"><div class="team-emblem ${homeTeam.slug}">${homeTeam.name}</div><div class="score-block"><span class="score-value">${homeScoreText}</span><span class="vs-export">${separator}</span><span class="score-value">${awayScoreText}</span></div><div class="team-emblem ${awayTeam.slug}">${awayTeam.name}</div></div><div class="interactive-controls"><div class="team-score-wrapper"><div class="team-emblem ${homeTeam.slug}">${homeTeam.name}</div><div class="score-control"><button class="score-btn" data-index="${index}" data-team="home" data-op="-1" ${disabledAttr}>${svgMinus}</button><input type="number" class="score-input" value="${null===match.homeScore?"":match.homeScore}" data-index="${index}" data-team="home" ${readonlyAttr}><button class="score-btn" data-index="${index}" data-team="home" data-op="1" ${disabledAttr}>${svgPlus}</button></div></div><div class="match-center-controls"><span class="vs">VS</span><button class="reset-score-btn" data-index="${index}" ${disabledAttr}>${svgReset}</button></div><div class="team-score-wrapper"><div class="team-emblem ${awayTeam.slug}">${awayTeam.name}</div><div class="score-control"><button class="score-btn" data-index="${index}" data-team="away" data-op="-1" ${disabledAttr}>${svgMinus}</button><input type="number" class="score-input" value="${null===match.awayScore?"":match.awayScore}" data-index="${index}" data-team="away" ${readonlyAttr}><button class="score-btn" data-index="${index}" data-team="away" data-op="1" ${disabledAttr}>${svgPlus}</button></div></div></div></div>`}).join("");renderWithMorph(container,html)}
+        function renderLeaderboardPage(date){const dayData=appData[date];const container=document.getElementById("leaderboard-container");if(!dayData||!dayData.settings||!dayData.settings.activeTeams)return void renderWithMorph(container,createNoDataMessage("ยังไม่มีข้อมูลตารางคะแนน","📊"));const stats=calculateLeaderboard(date),sortedTeams=Object.values(stats).sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.gd!==a.gd?b.gd-a.gd:b.gf!==a.gf?b.gf-a.gf:a.name.localeCompare(b.name)),medals=["🥇","🥈","🥉"],html=`<table class="leaderboard-table"><thead><tr><th>#</th><th class="team-name">ทีม</th><th>แข่ง</th><th>ชนะ</th><th>เสมอ</th><th>แพ้</th><th>ได้</th><th>เสีย</th><th>+/-</th><th>คะแนน</th></tr></thead><tbody>${sortedTeams.map((team,index)=>`<tr><td>${medals[index]||index+1}</td><td class="team-name"><div class="team-emblem ${team.slug}" style="display:inline-flex; padding: 4px 8px; font-size: 14px;">${team.name}</div></td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gf}</td><td>${team.ga}</td><td>${team.gd}</td><td><strong>${team.pts}</strong></td></tr>`).join("")}</tbody></table>`;renderWithMorph(container,html)}
         function calculateLeaderboard(date){const dayData=appData[date];if(!dayData||!dayData.schedule||!dayData.settings.activeTeams)return{};const stats={};return dayData.settings.activeTeams.forEach(slug=>{const teamInfo=TEAMS.find(t=>t.slug===slug);teamInfo&&(stats[slug]={name:teamInfo.name,slug:teamInfo.slug,p:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0})}),dayData.schedule.forEach(match=>{const{home:home,away:away,homeScore:homeScore,awayScore:awayScore}=match;if(null===homeScore||null===awayScore||!stats[home]||!stats[away])return;stats[home].p++,stats[away].p++,stats[home].gf+=homeScore,stats[home].ga+=awayScore,stats[away].gf+=awayScore,stats[away].ga+=homeScore,homeScore>awayScore?(stats[home].w++,stats[away].l++,stats[home].pts+=3):awayScore>homeScore?(stats[away].w++,stats[home].l++,stats[away].pts+=3):(stats[home].d++,stats[away].d++,stats[home].pts+=1,stats[away].pts+=1)}),Object.values(stats).forEach(team=>{team.gd=team.gf-team.ga}),stats}
         function setupNavigation(){navButtons.forEach(button=>{button.addEventListener("click",()=>setActivePage(button.dataset.page))})}
         function setActivePage(pageId){if(!currentUser&&"page-setup"===pageId)return void alert("คุณต้องเข้าสู่ระบบผู้ดูแลเพื่อเข้าถึงหน้านี้");activePage=pageId,shouldRestoreScroll=!1,pages.forEach(page=>page.classList.remove("active")),document.getElementById(pageId).classList.add("active"),navButtons.forEach(btn=>btn.classList.toggle("active",btn.dataset.page===pageId)),content.scrollTop=0}
