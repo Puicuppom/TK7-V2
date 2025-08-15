@@ -105,6 +105,7 @@
     
     <script>
         // --- CONFIGURATION ---
+        // !!! IMPORTANT !!! REPLACE THESE VALUES WITH YOUR OWN
         const API_KEY = 'AIzaSyCEBJ4r6fNvUmG0yMS39HL2fHitTEUHxSc'; 
         const CLIENT_ID = '957671796761-qf1dq8hn2sla96usu0gd0tn5r0uff0b6.apps.googleusercontent.com';
         const SPREADSHEET_ID = '10kWqj4SufMEujISUZptlYwaVjF6k6K5p1FUQzBHQFgk';
@@ -175,21 +176,92 @@
             isDomReady = true;
             checkAllLoadedAndStart();
         });
+
         function checkAllLoadedAndStart() {
             if (gapiInited && gisInited && isDomReady && !appStarted) {
                 appStarted = true;
                 startApp();
             }
         }
+        
+        // ----- START: MODIFICATION FOR PERSISTENT LOGIN -----
         async function startApp() {
             assignDOMElements();
             initEventListeners();
             await loadAdminEmails();
-            await updateSigninStatus();
-            await loadInitialData();
+
+            // At startup, try a silent login.
+            tokenClient.callback = async (resp) => {
+                // This callback will be used for both silent and interactive login
+                if (resp.error !== undefined) {
+                    // This is expected if silent login fails.
+                    // We'll update the UI to show the logged-out state.
+                    await updateSigninStatus(); 
+                    await loadInitialData(); // Then load public data
+                    return;
+                }
+                // On success (silent or interactive), update UI and load data.
+                await updateSigninStatus();
+                await loadInitialData();
+            };
+            tokenClient.requestAccessToken({ prompt: 'none' }); // The key part for silent login
+            
             setupPolling();
         }
 
+        // --- AUTHENTICATION ---
+        function handleAuthClick() {
+            if (!tokenClient) return;
+            // The callback is already set in startApp, so we just need to trigger the request.
+            // A blank prompt allows the pop-up to appear if needed.
+            tokenClient.requestAccessToken({ prompt: '' });
+        }
+
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                // Clear the token from our app's memory to sign out.
+                gapi.client.setToken('');
+                // Update the UI to reflect the signed-out state.
+                updateSigninStatus();
+                // We should also reload the data to show the public view.
+                loadInitialData();
+            }
+        }
+        // ----- END: MODIFICATION FOR PERSISTENT LOGIN -----
+
+        async function updateSigninStatus() {
+            const token = gapi.client.getToken();
+            const isLoggedIn = token !== null;
+            let isAdmin = false;
+
+            if (isLoggedIn) {
+                try {
+                    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { 'Authorization': `Bearer ${token.access_token}` } });
+                    if (!response.ok) throw new Error(`Failed to fetch user info: ${response.statusText}`);
+                    const profile = await response.json();
+                    const userEmail = profile.email.toLowerCase();
+                    if (adminEmails.includes(userEmail)) {
+                        isAdmin = true;
+                        userInfo.textContent = `👤 ${userEmail}`;
+                        userInfo.style.display = 'inline-block';
+                    }
+                } catch (err) { console.error("Error fetching user profile", err); isAdmin = false; }
+            }
+            
+            if (!isAdmin) { userInfo.style.display = 'none'; }
+            currentUser = isAdmin;
+            loginBtn.style.display = isAdmin ? 'none' : 'inline-block';
+            logoutBtn.style.display = isAdmin ? 'inline-block' : 'none';
+            document.querySelector('.nav-btn[data-page="page-setup"]').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('delete-day-btn').style.display = isAdmin ? 'inline-flex' : 'none';
+            
+            if (!isAdmin && activePage === 'page-setup') { 
+                setActivePage('page-schedule');
+            }
+            renderAllPagesForDate(currentDateKey);
+        }
+        
         function assignDOMElements() {
             contentContainer = document.getElementById('content');
             pages = document.querySelectorAll('.page');
@@ -218,62 +290,6 @@
                 }
             };
             contentContainer.addEventListener('click', handleMainClick);
-        }
-
-        // --- AUTHENTICATION ---
-        function handleAuthClick() {
-            if (!tokenClient) return;
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) { console.error("Login Error:", resp); return; }
-                await updateSigninStatus();
-            };
-            if (gapi.client.getToken() === null) { tokenClient.requestAccessToken({ prompt: '' }); } 
-            else { tokenClient.requestAccessToken({ prompt: '' }); }
-        }
-
-        // ----- START: MODIFICATION FOR PERSISTENT LOGIN -----
-        // This function has been modified to prevent revoking Google permissions on every logout.
-        // Instead of calling `google.accounts.oauth2.revoke`, we now only clear the token
-        // from the client's side using `gapi.client.setToken('')`.
-        // This means the user will only have to grant permissions once, and subsequent logins
-        // will be much faster and won't require re-authorization.
-        function handleSignoutClick() {
-            const token = gapi.client.getToken();
-            if (token !== null) {
-                // By only clearing the token, we sign the user out of our app's session
-                // without revoking the permissions they granted.
-                gapi.client.setToken('');
-                // We now call updateSigninStatus directly to update the UI.
-                updateSigninStatus();
-            }
-        }
-        // ----- END: MODIFICATION FOR PERSISTENT LOGIN -----
-
-        async function updateSigninStatus() {
-            const token = gapi.client.getToken();
-            const isLoggedIn = token !== null;
-            let isAdmin = false;
-            if (isLoggedIn) {
-                try {
-                    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { 'Authorization': `Bearer ${token.access_token}` } });
-                    if (!response.ok) throw new Error(`Failed to fetch user info: ${response.statusText}`);
-                    const profile = await response.json();
-                    const userEmail = profile.email.toLowerCase();
-                    if (adminEmails.includes(userEmail)) {
-                        isAdmin = true;
-                        userInfo.textContent = `👤 ${userEmail}`;
-                        userInfo.style.display = 'inline-block';
-                    }
-                } catch (err) { console.error("Error fetching user profile", err); isAdmin = false; }
-            }
-            if (!isAdmin) { userInfo.style.display = 'none'; }
-            currentUser = isAdmin;
-            loginBtn.style.display = isAdmin ? 'none' : 'inline-block';
-            logoutBtn.style.display = isAdmin ? 'inline-block' : 'none';
-            document.querySelector('.nav-btn[data-page="page-setup"]').style.display = isAdmin ? 'flex' : 'none';
-            document.getElementById('delete-day-btn').style.display = isAdmin ? 'inline-flex' : 'none';
-            if (!isAdmin && activePage === 'page-setup') { setActivePage('page-schedule'); }
-            renderAllPagesForDate(currentDateKey);
         }
         async function loadAdminEmails() {
             try {
@@ -488,7 +504,7 @@
         function resetSettingsForm(){currentUser&&(document.getElementById("time-per-match").value=9,document.getElementById("start-time").value="20:00",document.querySelectorAll(".team-switch").forEach(sw=>sw.checked=!0),updateAdvancedOptions(),document.getElementById("opener-home").value="",document.getElementById("opener-away").value="")}
         function updateAdvancedOptions(){updateOpenerSelects(),updateTemplateSelector()}
         function updateOpenerSelects(){const openerHomeSelect=document.getElementById("opener-home"),openerAwaySelect=document.getElementById("opener-away"),activeTeamSlugs=Array.from(document.querySelectorAll(".team-switch:checked")).map(sw=>sw.dataset.teamSlug),currentHome=openerHomeSelect.value,currentAway=openerAwaySelect.value;openerHomeSelect.innerHTML='<option value="">-- ไม่เลือก --</option>',openerAwaySelect.innerHTML='<option value="">-- ไม่เลือก --</option>',activeTeamSlugs.forEach(slug=>{const team=TEAMS.find(t=>t.slug===slug);if(team){const optionHtml=`<option value="${team.slug}">${team.name}</option>`;openerHomeSelect.innerHTML+=optionHtml,openerAwaySelect.innerHTML+=optionHtml}}),openerHomeSelect.value=activeTeamSlugs.includes(currentHome)?currentHome:"",openerAwaySelect.value=activeTeamSlugs.includes(currentAway)?currentAway:""}
-        function updateTemplateSelector(){const templateContainer=document.getElementById("template-selector-container"),openerContainer=document.getElementById("opener-selector-container"),selector=document.getElementById("template-selector"),teamCount=document.querySelectorAll(".team-switch:checked").length,templateKey=`${teamCount}-teams`,templates=MASTER_TEMPLATES[templateKey];templates&&templates.length>1?(selector.innerHTML="",templates.forEach((template,index)=>{const option=document.createElement("option");option.value=index,option.textContent=template.name,selector.appendChild(option)}),templateContainer.style.display="block"):templateContainer.style.display="none";const showOpener = teamCount !== 4 && teamCount !== 5; openerContainer.style.display = showOpener ? 'block' : 'none';}
+        function updateTemplateSelector(){const templateContainer=document.getElementById("template-selector-container"),openerContainer=document.getElementById("opener-selector-container"),selector=document.getElementById("template-selector"),teamCount=document.querySelectorAll(".team-switch:checked").length,templateKey=`${teamCount}-teams`,templates=MASTER_TEMPLATES[templateKey];templates&&templates.length>0?(selector.innerHTML="",templates.forEach((template,index)=>{const option=document.createElement("option");option.value=index,option.textContent=template.name,selector.appendChild(option)}),templateContainer.style.display="block"):templateContainer.style.display="none";const showOpener = teamCount !== 4 && teamCount !== 5; openerContainer.style.display = showOpener ? 'block' : 'none';}
         function generateScheduleFromTemplate(teams,templateIndex=0,opener=null){const teamCount=teams.length,templateKey=`${teamCount}-teams`;if(!MASTER_TEMPLATES[templateKey]||!MASTER_TEMPLATES[templateKey][templateIndex])throw new Error(`Template not found for ${teamCount} teams at index ${templateIndex}.`);let numberTemplate=[...MASTER_TEMPLATES[templateKey][templateIndex].data];const teamToNumberMap=new Map,numberToTeamMap=new Map;teams.forEach((teamSlug,index)=>{const number=index+1;teamToNumberMap.set(teamSlug,number),numberToTeamMap.set(number,teamSlug)});let translatedSchedule=numberTemplate.map(match=>({home:numberToTeamMap.get(match.home),away:numberToTeamMap.get(match.away)})).filter(match=>match.home&&match.away);if(opener&&opener.home&&opener.away){const openerIndex=translatedSchedule.findIndex(m=>m.home===opener.home&&m.away===opener.away);openerIndex>0&&(translatedSchedule=[...translatedSchedule.slice(openerIndex),...translatedSchedule.slice(0,openerIndex)])}return translatedSchedule}
         function generateDoubleRoundRobin(teams){let teamList=[...teams];const BYE="BYE_TEAM_PLACEHOLDER";teamList.length%2!=0&&teamList.push(BYE);const numTeams=teamList.length,numRounds=numTeams-1,leg1=[];for(let round=0;round<numRounds;round++){for(let i=0;i<numTeams/2;i++){const home=teamList[i],away=teamList[numTeams-1-i];home!==BYE&&away!==BYE&&leg1.push({home:home,away:away})}teamList.splice(1,0,teamList.pop())}const leg2=leg1.map(match=>({home:match.away,away:match.home}));return[...leg1,...leg2]}
         function handleAddMatch(){if(!currentUser)return;const dayData=appData[currentDateKey];if(!dayData||!dayData.settings.activeTeams||dayData.settings.activeTeams.length<2)return void alert("ต้องมีทีมที่เข้าร่วมอย่างน้อย 2 ทีมเพื่อเพิ่มแมตช์");let newSchedule=dayData.schedule?[...dayData.schedule]:[];newSchedule.push({home:dayData.settings.activeTeams[0],away:dayData.settings.activeTeams[1],homeScore:null,awayScore:null}),updateScheduleOrderInSheet(newSchedule)}
@@ -509,4 +525,3 @@
     </script>
 </body>
 </html>
-
